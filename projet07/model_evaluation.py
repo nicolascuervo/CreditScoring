@@ -237,8 +237,7 @@ def record_model_run(model: Any,
     return mlflow.get_run(model_info.run_id)
 
 
-def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]], 
-                   validation_threshold: float = 0.1) -> None:
+def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]]) -> None:
     """
     Plots ROC curves for multiple models and displays the custom model score on the plot.
 
@@ -249,9 +248,6 @@ def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]],
         - tuple[0]: The true binary labels (y_test) for the test data.
         - tuple[1]: The predicted probabilities (y_pred) for the test data.
     
-    validation_threshold : float, optional
-        The threshold for deciding whether to approve a client based on predicted probabilities 
-        (default is 0.1).
 
     Returns:
     --------
@@ -261,7 +257,7 @@ def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]],
     """
     
     # Iterate over each model's predictions and true labels
-    for model_name, (y_tst, y_prd) in pred_test_pairs.items():
+    for model_name, (y_tst, y_prd, validation_threshold) in pred_test_pairs.items():
         # Calculate the ROC curve
         fpr, tpr, thresholds = roc_curve(y_tst, y_prd)
         

@@ -14,6 +14,7 @@ seaborn = "^0.13.2"
 matplotlib = "^3.9.2"
 scikit-learn = "^1.5.1"
 optuna = "^4.0.0"
+lightgbm = "^4.5.0"
 
 
 [build-system]
