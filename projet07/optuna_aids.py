@@ -30,10 +30,50 @@ def get_study_summary(study):
      return summary
 
 def print_study_evol(study):
-    best_one = None
-    for i, trial in enumerate(study.trials):#19:32:53,389 19:32:51,982
-        if (best_one is None) or (trial.value> best_one['value']):
+    for i, trial in enumerate(study.trials):        
+        if i == 0 : best_one = {"idx":i, 'value':trial.value}
+        if trial.value >= best_one['value']:
             best_one = {"idx":i, 'value':trial.value}
         msg = f'[I {str(trial.datetime_complete)[:23]}] Trial {i} finished with value: {trial.value} and parameters: {trial.params}. '
         msg = msg + f'Best is trial {best_one['idx']} with value: {best_one['value']}.'
         print(msg)
+
+
+def prune_incomplete_trials(study_name, database_url, max_trials=-1):
+
+    study = optuna.create_study(study_name=study_name, 
+                                direction="maximize", 
+                                storage=database_url,                             
+                                load_if_exists=True,)
+    
+    
+    new_study = optuna.create_study(study_name=study_name, 
+                                direction="maximize", 
+                                load_if_exists=True,
+                                )
+    
+    for trial in study.trials[:max_trials]:
+        if trial.value is not None:
+            # trial.set_user_attr("history", 'test')
+            new_study.add_trial(trial)
+    n_pruned = len(study.trials) - len(new_study.trials) 
+
+    
+    
+    if n_pruned>0:
+        response  = input(f'{n_pruned} trials will be pruned, are you sure you want to continue? (Y/N)')
+        if response.lower() != 'y':
+            print('Prunning canceled')
+            return study
+    
+    optuna.delete_study(study_name=study_name, storage=database_url)
+    
+    study = optuna.create_study(study_name=study_name, 
+                                direction="maximize", 
+                                storage=database_url,                             
+                                load_if_exists=True,)
+    
+    for trial in new_study.trials:
+        study.add_trial(trial)
+
+    return study
