@@ -185,6 +185,12 @@ def record_model_run(model: Any,
     metrics = {"roc_auc":roc_auc,
                "model_score":model_score}
     
+    output ={'y_pred': y_pred,
+             'roc_auc':roc_auc,
+             'model_score': model_score,
+             'validation_threshold':validation_threshold,
+            }
+    
     # Retrieve the runs for a specific experiment by name or ID
     client = MlflowClient()    
     mlflow.set_experiment(experiment_name)
@@ -197,8 +203,9 @@ def record_model_run(model: Any,
     for run in runs:
 
         if (run.data.params == params) and (run.data.metrics == metrics) and (model_name == run.info.run_name.rsplit('_',1)[0]):
-            print("Duplicate run found, not logging a new one.")            
-            return run
+            print("Duplicate run found, not logging a new one.")
+            output['run'] = run
+            return  output
         
         similar_runs = similar_runs + [int(i) for i in re.findall(model_name+r'_\[(\d*)\]',run.info.run_name)]
     
@@ -233,8 +240,8 @@ def record_model_run(model: Any,
 
 
     print('Done.')
-
-    return mlflow.get_run(model_info.run_id)
+    output['run'] = mlflow.get_run(model_info.run_id)
+    return output
 
 
 def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]]) -> None:
