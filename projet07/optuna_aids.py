@@ -32,39 +32,29 @@ def get_study_summary(study):
 def print_study_evol(study):
     for i, trial in enumerate(study.trials):        
         if i == 0 : best_one = {"idx":i, 'value':trial.value}
-        if trial.value >= best_one['value']:
+        if trial.value is None:
+            best_one = best_one            
+        elif trial.value >= best_one['value']:
             best_one = {"idx":i, 'value':trial.value}
         msg = f'[I {str(trial.datetime_complete)[:23]}] Trial {i} finished with value: {trial.value} and parameters: {trial.params}. '
         msg = msg + f'Best is trial {best_one['idx']} with value: {best_one['value']}.'
         print(msg)
 
 
-<<<<<<< HEAD
 def prune_incomplete_trials(study_name, database_url, max_trials=-1):
 
-=======
-def prune_incomplete_trials(study_name, database_url):
-         
->>>>>>> b7241515be77b455c4ea907c2b5d7aae7a2eb95d
     study = optuna.create_study(study_name=study_name, 
                                 direction="maximize", 
                                 storage=database_url,                             
                                 load_if_exists=True,)
     
-<<<<<<< HEAD
     
-=======
->>>>>>> b7241515be77b455c4ea907c2b5d7aae7a2eb95d
     new_study = optuna.create_study(study_name=study_name, 
                                 direction="maximize", 
                                 load_if_exists=True,
                                 )
     
-<<<<<<< HEAD
     for trial in study.trials[:max_trials]:
-=======
-    for trial in study.trials:
->>>>>>> b7241515be77b455c4ea907c2b5d7aae7a2eb95d
         if trial.value is not None:
             # trial.set_user_attr("history", 'test')
             new_study.add_trial(trial)
