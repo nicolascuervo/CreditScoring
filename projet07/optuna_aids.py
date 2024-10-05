@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import optuna
 from multiprocessing import Pool
-from typing import List, Tuple, Dict, Any, Union
+from typing import List, Tuple, Dict, Any, Union, Callable
 import inspect
 from imblearn.pipeline import Pipeline #type: ignore
 from model_evaluation import score_model_proba
@@ -10,9 +10,40 @@ from sklearn.metrics import roc_auc_score
 
 # Custom type annotation for suggest_instructions
 SuggestInstruction = Dict[str, List[Tuple[str, Tuple[Any, ...], Dict[str, Any]]]]
-def evaluate_fold(args: Tuple) -> Tuple[float, float]:
+ModelStep = Tuple[str, Callable, Tuple[Any, ...], Dict[str, Any]]
+FoldEvaluationArgs = Tuple[
+    np.ndarray,             # X (feature matrix)
+    pd.Series,              # y (target)
+    List[ModelStep],        # model_steps (list of model steps)
+    Dict[str, Any],         # params (model parameters)
+    float,                  # validation_threshold
+    np.ndarray,             # train_idx (training indices)
+    np.ndarray,             # test_idx (test indices)
+    int                     # rnd_stt (random state)
+]
 
-    """ Function to evaluate a single fold in parallel. """
+def evaluate_fold(args: FoldEvaluationArgs) -> Tuple[float, float]:
+    """
+    Function to evaluate a single cross-validation fold in parallel.
+
+    Parameters
+    ----------
+    args : FoldEvaluationArgs
+        A tuple containing:
+        - X : np.ndarray : Feature matrix.
+        - y : pd.Series : Target values.
+        - model_steps : List[ModelStep] : The model steps to build the pipeline.
+        - params : Dict[str, Any] : Dictionary of hyperparameters for the model.
+        - validation_threshold : float : Threshold value for validation.
+        - train_idx : np.ndarray : Training indices for the current fold.
+        - test_idx : np.ndarray : Test indices for the current fold.
+        - rnd_stt : int : Random state seed for reproducibility.
+
+    Returns
+    -------
+    Tuple[float, float]
+        A tuple containing the model score and the ROC AUC score for the current fold.
+    """
     X, y, model_steps, params, validation_threshold, train_idx, test_idx, rnd_stt = args
 
     # Intitialize a random state
@@ -23,7 +54,9 @@ def evaluate_fold(args: Tuple) -> Tuple[float, float]:
     for step_name, step_class, step_args, step_kwargs in model_steps:
         step_kwargs = step_kwargs.copy()
         # Update kwargs with random state if necessary
-        if 'random_state' in inspect.signature(step_class.__init__).parameters:
+        # TODO :For future development: check if random_state is already determined for the state... 
+        # >      is it useful? 
+        if 'random_state' in inspect.signature(step_class.__init__).parameters: 
             step_kwargs['random_state'] = random_state 
         #verify model_params that belong to this step
         param_kwargs = {k.split('__',1)[-1]: v for k, v in params.items() if k.startswith(step_name+'__')}
@@ -33,7 +66,7 @@ def evaluate_fold(args: Tuple) -> Tuple[float, float]:
 
     # Create the pipeline with the dynamically generated steps
     pipeline = Pipeline(steps)
-
+    
     # Fit the pipeline on the training data
     pipeline.fit(X[train_idx,:], y.iloc[train_idx])
 
@@ -49,6 +82,37 @@ def evaluate_fold(args: Tuple) -> Tuple[float, float]:
 def create_objective(model_steps, suggest_instructions:SuggestInstruction, X, y, cv, 
                      processes:int=1,
                      random_states:List|int|None=None):
+    """
+    Create an objective function for Optuna to optimize.
+
+    Parameters
+    ----------
+    model_steps : List[ModelStep]
+        A list of model steps (e.g., oversampling, undersampling, classifier) to dynamically instantiate the pipeline.
+        
+    suggest_instructions : SuggestInstruction
+        Instructions for Optuna to generate hyperparameters using different suggestion methods.
+        
+    X : np.ndarray
+        Feature matrix used for training.
+        
+    y : pd.Series
+        Target values.
+        
+    cv : List[Tuple[np.ndarray, np.ndarray]]
+        A list of cross-validation folds, where each fold contains a tuple of training and test indices.
+        
+    processes : int, optional
+        The number of processes to use for parallel execution, by default 1.
+        
+    random_states : Union[List[int], int, None], optional
+        List or single integer seed(s) for random state initialization, by default None.
+
+    Returns
+    -------
+    Callable[[optuna.Trial], float]
+        The objective function to be passed to `optuna.study.optimize`.
+    """
     
     def objective(trial:optuna.Trial)->float:
         # prepare random_states if any
