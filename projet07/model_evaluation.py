@@ -307,15 +307,16 @@ def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]]) -> Non
     """
     
     # Iterate over each model's predictions and true labels
-    for model_name, (y_tst, y_prd, validation_threshold) in pred_test_pairs.items():
+    for model_name, values in pred_test_pairs.items():
+        (y_tst, y_prd) = values[:2]
         # Calculate the ROC curve
         fpr, tpr, thresholds = roc_curve(y_tst, y_prd)
         
         # Calculate the custom model score using score_model
-        model_score = roc_auc_score(y_tst, y_prd)
+        roc_auc = roc_auc_score(y_tst, y_prd)
         
         # Plot the ROC curve for the model
-        plt.plot(fpr, tpr, label=f'{model_name}; roc_auc_score={model_score:0.4f}')
+        plt.plot(fpr, tpr, label=f'{model_name}; roc_auc_score={roc_auc:0.4f}')
     
     # Customize the plot
     plt.xlabel('False Positive Rate')
