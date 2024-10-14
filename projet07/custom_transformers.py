@@ -1,6 +1,55 @@
 from imblearn.under_sampling.base import BaseUnderSampler
 from sklearn.utils import check_X_y
 from sklearn.model_selection import train_test_split
+from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
+import numpy as np
+
+class CreateDomainFeatures(BaseEstimator, TransformerMixin):
+    """
+    Custom transformer to create domain-specific features.
+    
+    This transformer calculates the following new features:
+    - CREDIT_INCOME_PERCENT: AMT_CREDIT / AMT_INCOME_TOTAL
+    - ANNUITY_INCOME_PERCENT: AMT_ANNUITY / AMT_INCOME_TOTAL
+    - CREDIT_TERM: AMT_ANNUITY / AMT_CREDIT
+    - DAYS_EMPLOYED_PERCENT: DAYS_EMPLOYED / DAYS_BIRTH
+    """
+
+    def __init__(self):
+        pass
+
+    def fit(self, X, y=None):
+        self.feature_names_in_ = X.columns
+        return self  # No fitting necessary
+
+    def transform(self, X):
+        # Copy the input data to avoid modifying the original DataFrame
+        X = X.copy()
+        
+        # Create the new domain-specific features
+        X['CREDIT_INCOME_PERCENT'] = X['AMT_CREDIT'] / X['AMT_INCOME_TOTAL']
+        X['ANNUITY_INCOME_PERCENT'] = X['AMT_ANNUITY'] / X['AMT_INCOME_TOTAL']
+        X['CREDIT_TERM'] = X['AMT_ANNUITY'] / X['AMT_CREDIT']
+        X['DAYS_EMPLOYED_PERCENT'] = X['DAYS_EMPLOYED'] / X['DAYS_BIRTH']
+        self.feature_names_out_ = X.columns
+        return X
+    
+class AlwaysZeroClassifier(BaseEstimator, ClassifierMixin):
+    """
+    A classifier that always predicts class 0.
+    """
+    def fit(self, X, y=None):
+        # No fitting process needed as it always predicts 0
+        return self
+
+    def predict(self, X):
+        # Always predict 0 for any input
+        return np.zeros(X.shape[0], dtype=int)
+
+    def predict_proba(self, X):
+        # Return probabilities: 100% confidence for class 0
+        return np.column_stack([np.ones(X.shape[0]), np.zeros(X.shape[0])])
+
 
 class StratifiedUnderSampler(BaseUnderSampler):
     def __init__(self, sample_size: int = 1000, random_state = None, **kwargs):

@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt  # For plotting the ROC curve
+import seaborn as sns
+import pandas as pd
 import mlflow  # For MLflow logging and model management
 import mlflow.sklearn  # Specifically for logging sklearn models in MLflow
 from mlflow.tracking import MlflowClient  # For managing experiments and runs in MLflow
@@ -8,6 +10,7 @@ from sklearn.metrics import roc_curve  # For calculating the ROC curve points
 import numpy as np  # For handling numerical arrays and operations
 import re  # For regular expressions to check run names
 from typing import Tuple, Dict, Any  # For type hinting
+from imblearn.pipeline import Pipeline
 
 
 def score_model(y_true: np.array,
@@ -277,7 +280,7 @@ def record_model_run(model: Any,
             sk_model=model,
             artifact_path=artifact_path,
             signature=signature,
-            input_example=test_tupple[0][0:10,:],
+            input_example=test_tupple[0].iloc[0:10,:],
             registered_model_name=model_name,
         )
 
@@ -331,4 +334,117 @@ def plot_roc_curve(pred_test_pairs: Dict[str, Tuple[np.array, np.array]]) -> Non
     plt.plot([0, 1], [0, 1], ':k')
     
     # Display the plot
+    plt.show()
+
+
+def get_feature_importance_from_model(model:Pipeline, cum_importance_cut:float=0.95):
+    """
+    Extract feature importances from a model pipeline and return a DataFrame 
+    with the most important features based on cumulative importance.
+
+    This function assumes that the model is a pipeline where the final step 
+    is a classifier with a `feature_importances_` attribute (e.g., 
+    LightGBMClassifier). It calculates the normalized importance of each 
+    feature and selects the features whose cumulative importance reaches a 
+    specified threshold.
+
+    Args:
+        model (Pipeline): A scikit-learn pipeline object with a classifier 
+                          as the last step that exposes `feature_importances_`.
+                          The classifier must have a `feature_names_in_` 
+                          attribute to get the feature names.
+        cum_importance_cut (float): Cumulative importance threshold to select 
+                                    the most important features. The default 
+                                    is 0.95 (95% cumulative importance).
+
+    Returns:
+        df (DataFrame): A DataFrame with the following columns:
+            - 'feature': Names of the features.
+            - 'importance': Importance values from the classifier.
+            - 'importance_normalized': Normalized importance values.
+            - 'cum_importance_normalized': Cumulative normalized importance.
+
+        most_important_features (list): List of feature names that together 
+                                        account for the cumulative importance 
+                                        up to the specified threshold.
+    """
+    # Sort features according to importance
+    domain_features_names = model['imputer'].feature_names_in_
+    feature_importance_values_domain = model['classifier'].feature_importances_
+    df = pd.DataFrame({'feature': domain_features_names, 'importance': feature_importance_values_domain})
+
+    df = df.sort_values('importance', ascending = False).reset_index().drop(columns=['index'])
+    
+    # Normalize the feature importances to add up to one
+    df['importance_normalized'] = df['importance'] / df['importance'].sum()
+    df['cum_importance_normalized'] = np.cumsum(df['importance_normalized'])
+
+    # get most_important features 
+    mask = (df['cum_importance_normalized'] - cum_importance_cut)>=0
+    idx = mask[mask].index[0]    
+    most_important_features = df.loc[0:idx, 'feature'].to_list()
+
+
+    return df, most_important_features
+
+def plot_feature_importances(df, most_important_features, n_feat=15):
+    """
+    Plot importances returned by a model. This can work with any measure of
+    feature importance provided that higher importance is better. 
+    
+    Args:
+        df (dataframe): feature importances. Must have the features in a column
+        called `features` and the importances in a column called `importance
+        
+    Returns:
+        shows a plot of the 15 most importance features
+        
+        df (dataframe): feature importances sorted by importance (highest to lowest) 
+        with a column for normalized importance
+        """
+    
+    plt.figure(figsize = (10, n_feat//3))
+    ax1 = plt.subplot()
+    ax2 = ax1.twiny()
+
+    # Set the ticks and labels
+    ax1.set_xlim([0, 0.153])
+    ax1.set_xticks(np.linspace(0,0.15,11))        
+    ax1.set_yticks(list(reversed(list(df.index[:n_feat]))))
+    ax1.set_yticklabels(df['feature'].head(n_feat))    
+    ax1.set_xlabel('Normalized Importance'); plt.title('Feature Importances')
+    ax1.set_title('Feature Importances')
+
+    ax2.set_xlim([0, 1.02])
+    ax2.set_ylim([-1, n_feat])
+    ax2.set_xticks(np.linspace(0,1,11))
+    ax2.set_xlabel('Cumulative Importance (Normalized)')
+
+    # Make a horizontal bar chart of feature importances
+    # Need to reverse the index to plot most important on top
+    ax1.barh(list(reversed(list(df.index[:n_feat]))), 
+            df['importance_normalized'].head(n_feat), 
+            align = 'center', edgecolor = 'k')
+    
+
+    # M/ake cumulative plot
+    sns.lineplot(x='cum_importance_normalized', 
+                 y=list(reversed(list(df.index[:n_feat]))), 
+                 data=df.head(n_feat), 
+                 ax=ax2, color='red', marker='o')
+    
+
+    # find cut
+    mask = df['feature'].isin(most_important_features)
+    cum_val = df.loc[mask, 'cum_importance_normalized'].max()
+    idx = df.loc[mask, 'cum_importance_normalized'].argmax()
+
+    ax2.plot([cum_val, cum_val], [n_feat, n_feat-idx-1], 'k:')
+    ax2.plot([0 , cum_val], [n_feat-idx-1, n_feat-idx-1], 'k:')
+    ax2.annotate(f'n_feat = {idx}, cum_imp_norm = {cum_val:0.4f}', 
+                 ((0 + cum_val)/2, n_feat-idx-1),
+                 verticalalignment='bottom',
+                 horizontalalignment='center'
+    )
+
     plt.show()

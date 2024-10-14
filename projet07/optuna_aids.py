@@ -2,27 +2,27 @@ import pandas as pd
 import numpy as np
 import optuna
 from multiprocessing import Pool
-from typing import List, Tuple, Dict, Any, Union, Callable
+from typing import Any, Callable
 import inspect
 from imblearn.pipeline import Pipeline 
 from model_evaluation import score_model_proba
 from sklearn.metrics import roc_auc_score
 
 # Custom type annotation for suggest_instructions
-SuggestInstruction = Dict[str, List[Tuple[str, Tuple[Any, ...], Dict[str, Any]]]]
-ModelStep = Tuple[str, Callable, Tuple[Any, ...], Dict[str, Any]]
-FoldEvaluationArgs = Tuple[
-    np.ndarray,             # X (feature matrix)
+SuggestInstruction = dict[str, list[tuple[str, tuple[Any, ...], dict[str, Any]]]]
+ModelStep = tuple[str, Callable, tuple[Any, ...], dict[str, Any]]
+FoldEvaluationArgs = tuple[
+    pd.DataFrame,             # X (feature matrix)
     pd.Series,              # y (target)
-    List[ModelStep],        # model_steps (list of model steps)
-    Dict[str, Any],         # params (model parameters)
+    list[ModelStep],        # model_steps (list of model steps)
+    dict[str, Any],         # params (model parameters)
     float,                  # validation_threshold
     np.ndarray,             # train_idx (training indices)
     np.ndarray,             # test_idx (test indices)
     int                     # rnd_stt (random state)
 ]
 
-def evaluate_fold(args: FoldEvaluationArgs) -> Tuple[float, float]:
+def evaluate_fold(args: FoldEvaluationArgs) -> tuple[float, float]:
     """
     Function to evaluate a single cross-validation fold in parallel.
 
@@ -30,10 +30,10 @@ def evaluate_fold(args: FoldEvaluationArgs) -> Tuple[float, float]:
     ----------
     args : FoldEvaluationArgs
         A tuple containing:
-        - X : np.ndarray : Feature matrix.
+        - X : pd.Dataframe : Feature matrix.
         - y : pd.Series : Target values.
-        - model_steps : List[ModelStep] : The model steps to build the pipeline.
-        - params : Dict[str, Any] : Dictionary of hyperparameters for the model.
+        - model_steps : list[ModelStep] : The model steps to build the pipeline.
+        - params : dict[str, Any] : dictionary of hyperparameters for the model.
         - validation_threshold : float : Threshold value for validation.
         - train_idx : np.ndarray : Training indices for the current fold.
         - test_idx : np.ndarray : Test indices for the current fold.
@@ -41,7 +41,7 @@ def evaluate_fold(args: FoldEvaluationArgs) -> Tuple[float, float]:
 
     Returns
     -------
-    Tuple[float, float]
+    tuple[float, float]
         A tuple containing the model score and the ROC AUC score for the current fold.
     """
     X, y, model_steps, params, validation_threshold, train_idx, test_idx, rnd_stt = args
@@ -68,10 +68,10 @@ def evaluate_fold(args: FoldEvaluationArgs) -> Tuple[float, float]:
     pipeline = Pipeline(steps)
     
     # Fit the pipeline on the training data
-    pipeline.fit(X[train_idx,:], y.iloc[train_idx])
+    pipeline.fit(X.iloc[train_idx,:].values, y.iloc[train_idx].values)
 
     # Predict probabilities on the test data
-    y_pred = pipeline.predict_proba(X[test_idx])[:, 1]
+    y_pred = pipeline.predict_proba(X.iloc[test_idx,:])[:, 1]
 
     # Evaluate model performance
     mdl_scr = score_model_proba(y.iloc[test_idx], y_pred, validation_threshold=validation_threshold, verbose=False)
@@ -81,13 +81,13 @@ def evaluate_fold(args: FoldEvaluationArgs) -> Tuple[float, float]:
 
 def create_objective(model_steps, suggest_instructions:SuggestInstruction, X, y, cv, 
                      processes:int=1,
-                     random_states:List|int|None=None):
+                     random_states:list|int|None=None):
     """
     Create an objective function for Optuna to optimize.
 
     Parameters
     ----------
-    model_steps : List[ModelStep]
+    model_steps : list[ModelStep]
         A list of model steps (e.g., oversampling, undersampling, classifier) to dynamically instantiate the pipeline.
         
     suggest_instructions : SuggestInstruction
@@ -99,14 +99,14 @@ def create_objective(model_steps, suggest_instructions:SuggestInstruction, X, y,
     y : pd.Series
         Target values.
         
-    cv : List[Tuple[np.ndarray, np.ndarray]]
+    cv : list[tuple[np.ndarray, np.ndarray]]
         A list of cross-validation folds, where each fold contains a tuple of training and test indices.
         
     processes : int, optional
         The number of processes to use for parallel execution, by default 1.
         
-    random_states : Union[List[int], int, None], optional
-        List or single integer seed(s) for random state initialization, by default None.
+    random_states : Union[list[int], int, None], optional
+        list or single integer seed(s) for random state initialization, by default None.
 
     Returns
     -------
@@ -123,7 +123,7 @@ def create_objective(model_steps, suggest_instructions:SuggestInstruction, X, y,
             raise ValueError(f"Array size {len(random_state_list)} does not match the expected size {len(cv)}.")
         
         # Step 1: Initialize parameters using Optuna
-        params = suggest_params(trial, suggest_instructions)
+        params = _suggest_params(trial, suggest_instructions)
             # pop validation threshold
         validation_threshold = params.pop('validation_threshold') 
         
@@ -146,7 +146,7 @@ def create_objective(model_steps, suggest_instructions:SuggestInstruction, X, y,
         return median_model_score
     
     
-    def suggest_params(trial: optuna.Trial, suggest_instructions: SuggestInstruction) -> dict:
+    def _suggest_params(trial: optuna.Trial, suggest_instructions: SuggestInstruction) -> dict:
         """
         Generate hyperparameters using Optuna's suggest functions based on the
         provided instructions.
@@ -163,14 +163,14 @@ def create_objective(model_steps, suggest_instructions:SuggestInstruction, X, y,
         trial : optuna.Trial
             An Optuna Trial object used for hyperparameter optimization.
             
-        suggest_instructions : Dict[str, List[Tuple[str, Tuple[Any, ...], 
-                                Dict[str, Any]]]]
+        suggest_instructions : dict[str, list[tuple[str, tuple[Any, ...], 
+                                dict[str, Any]]]]
             A dictionary where keys represent the type of suggest method 
             ('int', 'float', 'categorical', etc.) and values are lists of 
             tuples. Each tuple contains:
             - str : The name of the hyperparameter.
-            - Tuple[Any, ...] : Positional arguments for the suggest function.
-            - Dict[str, Any] : Keyword arguments for the suggest function.
+            - tuple[Any, ...] : Positional arguments for the suggest function.
+            - dict[str, Any] : Keyword arguments for the suggest function.
         
         Returns
         -------
