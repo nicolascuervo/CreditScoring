@@ -275,7 +275,7 @@ def record_model_run(model: Any,
         # Log the model
     
         # Infer the model signature
-        signature = infer_signature(test_tupple[0], y_pred, params)
+        signature = infer_signature(test_tupple[0].iloc[0:10,:], y_pred[0:10], model_params)
         model_info = mlflow.sklearn.log_model(
             sk_model=model,
             artifact_path=artifact_path,
