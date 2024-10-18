@@ -174,13 +174,14 @@ def get_trainned_model(model: Any,
     return model
 
 def record_model_run(model: Any,
-                     test_tupple: Tuple[np.array, np.array],
+                     test_tupple: tuple[pd.DataFrame, pd.Series],
                      experiment_name: str,
                      model_name: str,
                      model_version: int,
                      model_params: Dict[str, Any],
                      artifact_path: str,
-                     validation_threshold: float = 0.1) -> Any:
+                     validation_threshold: float = 0.1,
+                     ) -> Any:
     """
     Records a model run in MLflow by checking for duplicates and logging the model,
     parameters, and metrics if no duplicates are found.
@@ -190,7 +191,7 @@ def record_model_run(model: Any,
     model : Any
         The trained model to be logged in MLflow.
     
-    test_tupple : Tuple[np.array, np.array]
+    test_tupple : tuple[pd.DataFrame, pd.Series]
         A tuple containing the test data:
         - test_tupple[0]: Features (X_test) for testing.
         - test_tupple[1]: Target values (y_test) for testing.
@@ -369,8 +370,8 @@ def get_feature_importance_from_model(model:Pipeline, cum_importance_cut:float=0
                                         up to the specified threshold.
     """
     # Sort features according to importance
-    domain_features_names = model['imputer'].feature_names_in_
-    feature_importance_values_domain = model['classifier'].feature_importances_
+    domain_features_names = model.feature_names_in_
+    feature_importance_values_domain = model.feature_importances_
     df = pd.DataFrame({'feature': domain_features_names, 'importance': feature_importance_values_domain})
 
     df = df.sort_values('importance', ascending = False).reset_index().drop(columns=['index'])
@@ -412,7 +413,8 @@ def plot_feature_importances(df, most_important_features, n_feat=15):
     ax1.set_xticks(np.linspace(0,0.15,11))        
     ax1.set_yticks(list(reversed(list(df.index[:n_feat]))))
     ax1.set_yticklabels(df['feature'].head(n_feat))    
-    ax1.set_xlabel('Normalized Importance'); plt.title('Feature Importances')
+    ax1.set_xlabel('Normalized Importance'); 
+    plt.title('Feature Importances')
     ax1.set_title('Feature Importances')
 
     ax2.set_xlim([0, 1.02])
