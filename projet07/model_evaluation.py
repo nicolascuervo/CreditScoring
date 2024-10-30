@@ -417,7 +417,7 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
     ax1.set_xticks(ax1_xticks)
     ax1.set_yticks(list(reversed(list(df.index[:n_feat]))))
     ax1.set_yticklabels(df['feature'].head(n_feat), fontsize=8) 
-    ax1.set_xticklabels([f'{x:0.1}' for x in ax1_xticks], fontsize=8, rotation=90)   
+    ax1.set_xticklabels([f'{x:0.3f}' for x in ax1_xticks], fontsize=8, rotation=90)   
     ax1.set_xlabel('Normalized Importance'); 
     plt.title('Feature Importances')
     ax1.set_title('Feature Importances')
@@ -428,7 +428,7 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
     ax2.set_ylim([-1, n_feat])
     ax2_xticks = np.linspace(0,1,11)
     ax2.set_xticks(ax2_xticks)
-    ax2.set_xticklabels([f'{x:0.3}' for x in ax2_xticks], fontsize=8, rotation=90)
+    ax2.set_xticklabels([f'{x:0.1f}' for x in ax2_xticks], fontsize=8, rotation=90)
     ax2.set_xlabel('Cumulative Importance (Normalized)')
     
     ax2.grid(False)
