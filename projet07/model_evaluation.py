@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt  # For plotting the ROC curve
 import seaborn as sns
 import pandas as pd
+import shap
 import mlflow  # For MLflow logging and model management
 import mlflow.sklearn  # Specifically for logging sklearn models in MLflow
 from mlflow.tracking import MlflowClient  # For managing experiments and runs in MLflow
@@ -412,30 +413,38 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
 
     # Set the ticks and labels
     ax1.set_xlim([0, 0.153])
-    ax1.set_xticks(np.linspace(0,0.15,11))        
+    ax1_xticks = np.linspace(0,0.15,11)
+    ax1.set_xticks(ax1_xticks)
     ax1.set_yticks(list(reversed(list(df.index[:n_feat]))))
-    ax1.set_yticklabels(df['feature'].head(n_feat))    
+    ax1.set_yticklabels(df['feature'].head(n_feat), fontsize=8) 
+    ax1.set_xticklabels([f'{x:0.1}' for x in ax1_xticks], fontsize=8, rotation=90)   
     ax1.set_xlabel('Normalized Importance'); 
     plt.title('Feature Importances')
     ax1.set_title('Feature Importances')
 
+
+            
     ax2.set_xlim([0, 1.02])
     ax2.set_ylim([-1, n_feat])
-    ax2.set_xticks(np.linspace(0,1,11))
+    ax2_xticks = np.linspace(0,1,11)
+    ax2.set_xticks(ax2_xticks)
+    ax2.set_xticklabels([f'{x:0.3}' for x in ax2_xticks], fontsize=8, rotation=90)
     ax2.set_xlabel('Cumulative Importance (Normalized)')
-
+    
+    ax2.grid(False)
+    cmap = shap.plots.colors.red_blue
     # Make a horizontal bar chart of feature importances
     # Need to reverse the index to plot most important on top
     ax1.barh(list(reversed(list(df.index[:n_feat]))), 
             df['importance_normalized'].head(n_feat), 
-            align = 'center', edgecolor = 'k')
+            align = 'center', color=cmap(0))
     
 
     # M/ake cumulative plot
     sns.lineplot(x='cum_importance_normalized', 
                  y=list(reversed(list(df.index[:n_feat]))), 
                  data=df.head(n_feat), 
-                 ax=ax2, color='red', marker='o')
+                 ax=ax2, marker='o', color=cmap(1.0))
     
 
     # find cut
@@ -448,8 +457,12 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
     ax2.annotate(f'n_feat = {idx}, cum_imp_norm = {cum_val:0.4f}', 
                  ((0 + cum_val)/2, n_feat-idx-1),
                  verticalalignment='bottom',
-                 horizontalalignment='center'
+                 horizontalalignment='center',
+                 fontsize=8,
     )
+
+    
+
     return (ax1, ax2)
 
     
