@@ -388,7 +388,7 @@ def get_feature_importance_from_model(model:Pipeline, cum_importance_cut:float=0
 
     return df, most_important_features
 
-def plot_feature_importances(df, most_important_features, n_feat=15):
+def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
     """
     Plot importances returned by a model. This can work with any measure of
     feature importance provided that higher importance is better. 
@@ -403,9 +403,10 @@ def plot_feature_importances(df, most_important_features, n_feat=15):
         df (dataframe): feature importances sorted by importance (highest to lowest) 
         with a column for normalized importance
         """
-    
-    plt.figure(figsize = (10, n_feat//3))
-    ax1 = plt.subplot()
+    if ax1 is None:
+        plt.figure(figsize = (10, n_feat//3))
+        ax1 = plt.subplot()
+
     ax2 = ax1.twiny()
 
     # Set the ticks and labels
@@ -449,4 +450,4 @@ def plot_feature_importances(df, most_important_features, n_feat=15):
                  horizontalalignment='center'
     )
 
-    plt.show()
+    

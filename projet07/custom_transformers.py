@@ -56,7 +56,7 @@ class DataFrameWrapper(TransformerMixin):
             feature_names = self.feature_names
         if self.clean_column_names:
             feature_names = clean_column_names(feature_names)
-        return pd.DataFrame(transformed, columns=feature_names)
+        return pd.DataFrame(transformed, columns=feature_names, index=X.index)
 
     def fit_transform(self, X, y=None):
         self.fit(X, y)

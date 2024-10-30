@@ -5,7 +5,7 @@ from multiprocessing import Pool
 from typing import Any, Callable
 import inspect
 from imblearn.pipeline import Pipeline 
-from model_evaluation import score_model_proba
+from projet07.model_evaluation import score_model_proba
 from sklearn.metrics import roc_auc_score
 
 # Custom type annotation for suggest_instructions
