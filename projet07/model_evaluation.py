@@ -368,6 +368,7 @@ def get_feature_importance_from_model(model:Pipeline, cum_importance_cut:float=0
         most_important_features (list): List of feature names that together 
                                         account for the cumulative importance 
                                         up to the specified threshold.
+
     """
     # Sort features according to importance
     domain_features_names = model.feature_names_in_
@@ -449,5 +450,6 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
                  verticalalignment='bottom',
                  horizontalalignment='center'
     )
+    return (ax1, ax2)
 
     
