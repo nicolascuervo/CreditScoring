@@ -422,8 +422,7 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
     plt.title('Feature Importances')
     ax1.set_title('Feature Importances')
 
-
-            
+           
     ax2.set_xlim([0, 1.02])
     ax2.set_ylim([-1, n_feat])
     ax2_xticks = np.linspace(0,1,11)
@@ -454,13 +453,19 @@ def plot_feature_importances(df, most_important_features, n_feat=15, ax1=None):
 
     ax2.plot([cum_val, cum_val], [n_feat, n_feat-idx-1], 'k:')
     ax2.plot([0 , cum_val], [n_feat-idx-1, n_feat-idx-1], 'k:')
+    # ax2.annotate(f'n_feat = {idx}, cum_imp_norm = {cum_val:0.4f}', 
+    #              ((0 + cum_val)/2, n_feat-idx-1),
+    #              verticalalignment='bottom',
+    #              horizontalalignment='center',
+    #              fontsize=8,
+    # )
     ax2.annotate(f'n_feat = {idx}, cum_imp_norm = {cum_val:0.4f}', 
-                 ((0 + cum_val)/2, n_feat-idx-1),
-                 verticalalignment='bottom',
-                 horizontalalignment='center',
+                 (cum_val, n_feat),
+                 verticalalignment='top',                                  
+                 horizontalalignment='left',
+                 rotation=-90,
                  fontsize=8,
     )
-
     
 
     return (ax1, ax2)
