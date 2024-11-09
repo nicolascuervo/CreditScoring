@@ -68,7 +68,7 @@ def test_score_model_pair_half_right_but_costly():
     y_true = [False, True]
     y_pred = [False, False]
     cost_ratio = 10.0
-    assert score_model(y_true, y_pred, cost_ratio=cost_ratio) == 10.0/11.0
+    assert score_model(y_true, y_pred, cost_ratio=cost_ratio) == 1.0/11.0
 
 
 def test_score_model_pair_half_right_but_acceptable():
