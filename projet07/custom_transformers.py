@@ -42,10 +42,22 @@ class DataFrameWrapper(TransformerMixin):
 
     def fit(self, X, y=None):
         self.transformer.fit(X, y)
-        # If feature names are not provided, use the column names of X
+        # If feature names are not provided, use the column names of X        
         if self.feature_names is None:
             self.feature_names = X.columns if isinstance(X, pd.DataFrame) else [f"feature_{i}" for i in range(X.shape[1])]
+        self.feature_names_in_ = self.feature_names
+
         return self
+
+    def get_feature_names_out(self, input_features=None) -> np.ndarray:
+
+        if (input_features is None) and (self.feature_names_in_ is None):
+            return np.array([])
+        elif (input_features is None):
+            input_features = self.feature_names_in_
+        
+        return self.transformer.get_feature_names_out(input_features)
+
 
     def transform(self, X):
         transformed = self.transformer.transform(X)
@@ -73,12 +85,19 @@ class CreateDomainFeatures(BaseEstimator, TransformerMixin):
     - CREDIT_TERM: AMT_ANNUITY / AMT_CREDIT
     - DAYS_EMPLOYED_PERCENT: DAYS_EMPLOYED / DAYS_BIRTH
     """
+    composed_mapping = {'DAYS_EMPLOYED_ANOM': ['DAYS_EMPLOYED'],
+                    'CREDIT_INCOME_PERCENT': ['AMT_CREDIT', 'AMT_INCOME_TOTAL'],
+                    'ANNUITY_INCOME_PERCENT': ['AMT_ANNUITY', 'AMT_INCOME_TOTAL'],
+                    'CREDIT_TERM': ['AMT_ANNUITY', 'AMT_CREDIT'],
+                    'DAYS_EMPLOYED_PERCENT': ['DAYS_EMPLOYED', 'DAYS_BIRTH']}
 
     def __init__(self):
         pass
 
     def fit(self, X, y=None):
         self.feature_names_in_ = X.columns
+        
+
         return self  # No fitting necessary
 
     def transform(self, X):
@@ -96,7 +115,25 @@ class CreateDomainFeatures(BaseEstimator, TransformerMixin):
         
         self.feature_names_out_ = X.columns
         return X
-    
+ 
+    def get_feature_names_out(self, input_features=None) -> np.ndarray:
+        new_features = ['DAYS_EMPLOYED_ANOM',         
+         'CREDIT_INCOME_PERCENT',
+         'ANNUITY_INCOME_PERCENT',
+         'CREDIT_TERM',
+         'DAYS_EMPLOYED_PERCENT']
+        
+        if input_features is None and self.feature_names_out_ is None:
+            return new_features
+        elif input_features is None :
+            return self.feature_names_out_
+                
+        features_added = [feat for feat in new_features if feat not in input_features]
+        feature_names_out = input_features.copy()
+        feature_names_out = feature_names_out + features_added
+
+        return feature_names_out
+   
 class AlwaysZeroClassifier(BaseEstimator, ClassifierMixin):
     """
     A classifier that always predicts class 0.

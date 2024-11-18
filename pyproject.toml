@@ -24,6 +24,8 @@ shap = "^0.46.0"
 pydantic = "^2.9.2"
 gdown = "^5.2.0"
 pytest = "^8.3.3"
+evidently = "^0.4.39"
+scipy = "^1.14.1"
 
 
 [build-system]
